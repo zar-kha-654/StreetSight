@@ -216,171 +216,177 @@ if uploaded_file is not None:
         )
 
 
+
 # -----------------------------
 # RESULTS AND HUMAN REVIEW
 # -----------------------------
 analysis = st.session_state.get("analysis")
 
 if analysis is not None:
-    # Do not show results from a previously uploaded image.
-    if (
-        uploaded_file is not None
-        and analysis["image_hash"]
-        == hashlib.sha256(
-            ImageOps.exif_transpose(
+    # Display results only for the currently uploaded image.
+    if uploaded_file is not None:
+        try:
+            current_image = ImageOps.exif_transpose(
                 Image.open(uploaded_file)
-            ).convert("RGB").tobytes()
-        ).hexdigest()[:12]
-    ):
-        st.divider()
-        st.header("Analysis results")
+            ).convert("RGB")
 
-        original_col, annotated_col = st.columns(2)
+            current_hash = hashlib.sha256(
+                current_image.tobytes()
+            ).hexdigest()[:12]
 
-        with original_col:
-            st.subheader("Original image")
-            st.image(
-                analysis["original"],
-                use_container_width=True,
-            )
+        except Exception:
+            current_hash = None
 
-        with annotated_col:
-            st.subheader("AI annotations")
-            st.image(
-                analysis["annotated"],
-                use_container_width=True,
-            )
+        if current_hash == analysis["image_hash"]:
+            st.divider()
+            st.header("Analysis results")
 
-        detections = analysis["detections"]
+            original_col, annotated_col = st.columns(2)
 
-        st.subheader("Detection summary")
-
-        total = len(detections)
-        first_metric, second_metric = st.columns(2)
-
-        first_metric.metric("Predictions", total)
-        second_metric.metric(
-            "Damage category",
-            "Pothole" if total else "None detected",
-        )
-
-        if not detections:
-            st.success(
-                "The model did not detect any potholes above "
-                "the selected confidence threshold."
-            )
-            st.warning(
-                "No detection does not mean the road is safe. "
-                "The model may miss damage."
-            )
-
-        st.divider()
-        st.header("Review and verify")
-
-        st.write(
-            "Accept or reject each prediction. These decisions "
-            "record your review; they do not establish ground truth."
-        )
-
-        
-        decisions = {}
-
-        for detection in detections:
-            detection_id = detection["id"]
-            review_key = (
-                f"review_{analysis['image_hash']}_{detection_id}"
-            )
-
-            if review_key not in st.session_state:
-                st.session_state[review_key] = "Pending"
-
-            with st.container(border=True):
-                st.write(
-                    f"**Prediction {detection_id + 1}:** "
-                    f"{detection['class']}"
-                )
-                st.write(
-                    f"Model confidence: "
-                    f"{detection['confidence']:.1%}"
-                )
-                st.caption(
-                    f"Bounding box: {detection['box']}"
+            with original_col:
+                st.subheader("Original image")
+                st.image(
+                    analysis["original"],
+                    use_container_width=True,
                 )
 
-                decision = st.radio(
-                    "Your review decision",
-                    options=["Pending", "Accepted", "Rejected"],
-                    key=review_key,
-                    horizontal=True,
+            with annotated_col:
+                st.subheader("AI annotations")
+                st.image(
+                    analysis["annotated"],
+                    use_container_width=True,
                 )
 
-                decisions[detection_id] = decision
+            detections = analysis["detections"]
+            total = len(detections)
 
-        
+            st.subheader("Detection summary")
+
+            first_metric, second_metric = st.columns(2)
+
+            first_metric.metric("Predictions", total)
+            second_metric.metric(
+                "Damage category",
+                "Pothole" if total else "None detected",
+            )
+
+            if not detections:
+                st.info(
+                    "The model did not detect potholes above "
+                    "the selected confidence threshold."
+                )
+                st.warning(
+                    "No detection does not mean the road is safe. "
+                    "The model may miss damage."
+                )
+
+            st.divider()
+            st.header("Review and verify")
+
+            st.write(
+                "Review each prediction and choose Pending, "
+                "Accepted, or Rejected. Your decision records "
+                "your review, not independently verified ground truth."
+            )
+
+            decisions = {}
+
+            for detection in detections:
+                detection_id = detection["id"]
+
+                review_key = (
+                    f"review_{analysis['image_hash']}_{detection_id}"
+                )
+
+                if review_key not in st.session_state:
+                    st.session_state[review_key] = "Pending"
+
+                with st.container(border=True):
+                    st.write(
+                        f"**Prediction {detection_id + 1}:** "
+                        f"{detection['class']}"
+                    )
+
+                    st.write(
+                        f"Model confidence: "
+                        f"{detection['confidence']:.1%}"
+                    )
+
+                    st.caption(
+                        f"Bounding box (x1, y1, x2, y2): "
+                        f"{detection['box']}"
+                    )
+
+                    decision = st.radio(
+                        "Your review decision",
+                        options=[
+                            "Pending",
+                            "Accepted",
+                            "Rejected",
+                        ],
+                        key=review_key,
+                        horizontal=True,
+                    )
+
+                    decisions[detection_id] = decision
+
+            # Count decisions AFTER the loop.
             accepted_count = sum(
                 decision == "Accepted"
                 for decision in decisions.values()
             )
+
             rejected_count = sum(
                 decision == "Rejected"
                 for decision in decisions.values()
             )
+
             pending_count = sum(
                 decision == "Pending"
                 for decision in decisions.values()
             )
-            
+
+            st.subheader("Verification summary")
+
             metric_a, metric_b, metric_c = st.columns(3)
-            
+
             metric_a.metric("Accepted", accepted_count)
             metric_b.metric("Rejected", rejected_count)
             metric_c.metric("Pending", pending_count)
 
+            st.caption(
+                "Accepted and rejected indicate user decisions. "
+                "Pending means the prediction has not been reviewed."
+            )
 
-        st.caption(
-            "These are user review decisions, not independent "
-            "confirmation of the actual road condition."
-        )
+            st.divider()
+            st.subheader("Evidence details")
 
-        accepted_count = sum(decisions.values())
-        rejected_count = total - accepted_count
+            st.write(
+                f"**Report reference:** "
+                f"SS-{analysis['image_hash'].upper()}"
+            )
 
-        metric_a, metric_b, metric_c = st.columns(3)
+            st.write(
+                f"**Analysis time (UTC):** "
+                f"{analysis['timestamp']}"
+            )
 
-        metric_a.metric("Total predictions", total)
-        metric_b.metric("Accepted", accepted_count)
-        metric_c.metric("Not accepted", rejected_count)
+            st.write(
+                f"**User-entered location:** "
+                f"{analysis['location'] or 'Not provided'}"
+            )
 
-        st.caption(
-            "Unchecked predictions are counted as not accepted "
-            "in this preliminary review. They are not necessarily "
-            "confirmed rejections."
-        )
+            st.warning(
+                "StreetSight provides preliminary computer-vision "
+                "evidence. Predictions can be inaccurate. Human "
+                "review does not independently confirm the physical "
+                "road condition."
+            )
 
-        st.divider()
-        st.subheader("Evidence details")
-
-        st.write(
-            f"**Report reference:** SS-{analysis['image_hash'].upper()}"
-        )
-        st.write(
-            f"**Analysis time (UTC):** {analysis['timestamp']}"
-        )
-        st.write(
-            f"**User-entered location:** "
-            f"{analysis['location'] or 'Not provided'}"
-        )
-
-        st.warning(
-            "StreetSight provides preliminary computer-vision "
-            "evidence. Predictions can be incorrect. Human review "
-            "does not independently verify the physical road condition."
-        )
-
-        # PDF export will be added after inference and review work.
-        st.info(
-            "Next development step: downloadable PDF evidence report."
-        )
+            st.info(
+                "Next step: generate a downloadable PDF evidence report."
+            )
 
 st.divider()
 
