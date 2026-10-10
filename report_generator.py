@@ -77,13 +77,14 @@ def generate_evidence_pdf(analysis, decisions):
         Paragraph("Evidence report", styles["Heading1"])
     )
 
+    
     metadata = [
         ["Report reference", report_id],
         ["Analysis time (UTC)", analysis["timestamp"]],
-        [
-            "Location entered by user",
-            analysis.get("location") or "Not provided",
-        ],
+        ["Road or street", analysis.get("road_name") or "Not provided"],
+        ["Area or neighborhood", analysis.get("area_name") or "Not provided"],
+        ["City", analysis.get("city_name") or "Not provided"],
+        ["Nearby landmark", analysis.get("landmark") or "Not provided"],
         ["Detector", "Pretrained pothole object detector"],
         ["Predictions", str(len(analysis["detections"]))],
     ]
