@@ -225,7 +225,13 @@ if uploaded_file is not None:
                             annotated_rgb
                         ),
                         "detections": detections,
-                        "location": location.strip(),
+                        
+                        "location": location,
+                        "road_name": road_name.strip(),
+                        "area_name": area_name.strip(),
+                        "city_name": city_name.strip(),
+                        "landmark": landmark.strip(),
+
                         "timestamp": datetime.now(
                             timezone.utc
                         ).isoformat(timespec="seconds"),
