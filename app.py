@@ -101,10 +101,42 @@ uploaded_file = st.file_uploader(
     help="Use a clear image showing the road surface.",
 )
 
-location = st.text_input(
-    "Location (optional)",
-    placeholder="e.g. Street or neighborhood",
+
+st.subheader("Where was the damage observed?")
+
+road_name = st.text_input(
+    "Road or street name",
+    placeholder="e.g. Kashmir Highway",
 )
+
+area_name = st.text_input(
+    "Area or neighborhood",
+    placeholder="e.g. G-10",
+)
+
+city_name = st.text_input(
+    "City",
+    value="Islamabad",
+)
+
+landmark = st.text_input(
+    "Nearby landmark (optional)",
+    placeholder="e.g. Near a bus stop or market",
+)
+
+location_parts = [
+    value.strip()
+    for value in [
+        road_name,
+        area_name,
+        city_name,
+        landmark,
+    ]
+    if value and value.strip()
+]
+
+location = ", ".join(location_parts)
+
 
 confidence = st.slider(
     "Detection confidence threshold",
