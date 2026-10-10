@@ -1,4 +1,4 @@
-
+from report_generator import generate_evidence_pdf
 import hashlib
 from datetime import datetime, timezone
 
@@ -384,9 +384,32 @@ if analysis is not None:
                 "road condition."
             )
 
-            st.info(
-                "Next step: generate a downloadable PDF evidence report."
-            )
+            
+            st.subheader("Download evidence report")
+
+            try:
+                pdf_bytes = generate_evidence_pdf(
+                    analysis,
+                    decisions,
+                )
+
+                st.download_button(
+                    label="Download PDF evidence report",
+                    data=pdf_bytes,
+                    file_name=(
+                        f"StreetSight_{analysis['image_hash']}.pdf"
+                    ),
+                    mime="application/pdf",
+                    type="primary",
+                    use_container_width=True,
+                )
+
+            except Exception as error:
+                st.error("Could not generate the PDF report.")
+                st.caption(
+                    f"Error: {type(error).__name__}: "
+                    f"{str(error)[:250]}"
+                )
 
 st.divider()
 
