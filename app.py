@@ -316,24 +316,26 @@ if analysis is not None:
 
                 decisions[detection_id] = decision
 
-        accepted_count = sum(
-            decision == "Accepted"
-            for decision in decisions.values()
-        )
-        rejected_count = sum(
-            decision == "Rejected"
-            for decision in decisions.values()
-        )
-        pending_count = sum(
-            decision == "Pending"
-            for decision in decisions.values()
-        )
+        
+            accepted_count = sum(
+                decision == "Accepted"
+                for decision in decisions.values()
+            )
+            rejected_count = sum(
+                decision == "Rejected"
+                for decision in decisions.values()
+            )
+            pending_count = sum(
+                decision == "Pending"
+                for decision in decisions.values()
+            )
+            
+            metric_a, metric_b, metric_c = st.columns(3)
+            
+            metric_a.metric("Accepted", accepted_count)
+            metric_b.metric("Rejected", rejected_count)
+            metric_c.metric("Pending", pending_count)
 
-        metric_a, metric_b, metric_c = st.columns(3)
-
-        metric_a.metric("Accepted", accepted_count)
-        metric_b.metric("Rejected", rejected_count)
-        metric_c.metric("Pending", pending_count)
 
         st.caption(
             "These are user review decisions, not independent "
