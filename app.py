@@ -282,17 +282,17 @@ if analysis is not None:
             "record your review; they do not establish ground truth."
         )
 
+        
         decisions = {}
 
         for detection in detections:
             detection_id = detection["id"]
-            checkbox_key = (
+            review_key = (
                 f"review_{analysis['image_hash']}_{detection_id}"
             )
 
-            # Default each prediction to pending review.
-            if checkbox_key not in st.session_state:
-                st.session_state[checkbox_key] = False
+            if review_key not in st.session_state:
+                st.session_state[review_key] = "Pending"
 
             with st.container(border=True):
                 st.write(
@@ -304,16 +304,41 @@ if analysis is not None:
                     f"{detection['confidence']:.1%}"
                 )
                 st.caption(
-                    f"Bounding box (x1, y1, x2, y2): "
-                    f"{detection['box']}"
+                    f"Bounding box: {detection['box']}"
                 )
 
-                accepted = st.checkbox(
-                    "I reviewed this prediction and accept it",
-                    key=checkbox_key,
+                decision = st.radio(
+                    "Your review decision",
+                    options=["Pending", "Accepted", "Rejected"],
+                    key=review_key,
+                    horizontal=True,
                 )
 
-                decisions[detection_id] = accepted
+                decisions[detection_id] = decision
+
+        accepted_count = sum(
+            decision == "Accepted"
+            for decision in decisions.values()
+        )
+        rejected_count = sum(
+            decision == "Rejected"
+            for decision in decisions.values()
+        )
+        pending_count = sum(
+            decision == "Pending"
+            for decision in decisions.values()
+        )
+
+        metric_a, metric_b, metric_c = st.columns(3)
+
+        metric_a.metric("Accepted", accepted_count)
+        metric_b.metric("Rejected", rejected_count)
+        metric_c.metric("Pending", pending_count)
+
+        st.caption(
+            "These are user review decisions, not independent "
+            "confirmation of the actual road condition."
+        )
 
         accepted_count = sum(decisions.values())
         rejected_count = total - accepted_count
